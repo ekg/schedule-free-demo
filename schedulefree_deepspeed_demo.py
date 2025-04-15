@@ -82,7 +82,8 @@ def create_deepspeed_config(args):
             "stage": 2,
             "contiguous_gradients": True,
             "overlap_comm": True,
-        }
+        },
+        "wall_clock_breakdown": True
     }
     return config
 
