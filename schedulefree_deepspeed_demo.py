@@ -79,7 +79,8 @@ def create_deepspeed_config(args):
         "zero_optimization": {
             "stage": 2,
             "contiguous_gradients": True,
-            "overlap_comm": True
+            "overlap_comm": True,
+            "zero_allow_untested_optimizer": True
         }
     }
     return config
