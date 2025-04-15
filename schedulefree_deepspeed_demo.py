@@ -72,6 +72,7 @@ def create_deepspeed_config(args):
         "train_batch_size": args.batch_size,
         "gradient_accumulation_steps": 1,
         "gradient_clipping": 1.0,
+        "zero_allow_untested_optimizer": True,
         "fp16": {
             "enabled": True,
             "loss_scale": 0,
@@ -81,7 +82,6 @@ def create_deepspeed_config(args):
             "stage": 2,
             "contiguous_gradients": True,
             "overlap_comm": True,
-            "zero_allow_untested_optimizer": True
         }
     }
     return config
