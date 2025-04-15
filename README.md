@@ -85,3 +85,30 @@ If your model uses BatchNorm layers, additional handling is required:
 - [The Road Less Scheduled](https://arxiv.org/abs/2405.15682) - Original paper on Schedule-Free optimization
 - [Schedule-Free GitHub Repository](https://github.com/facebookresearch/schedule_free)
 - [DeepSpeed Documentation](https://www.deepspeed.ai/)
+
+## DeepSpeed Compatibility Note
+
+When using Schedule-Free with DeepSpeed ZeRO optimization, you may need a compatibility wrapper:
+
+```python
+# Create a wrapper that inherits from torch.optim.AdamW for better DeepSpeed compatibility
+class ScheduleFreeWrapper(optim.AdamW):
+    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), weight_decay=0.01, warmup_steps=100):
+        super().__init__(params, lr=lr, betas=betas, weight_decay=weight_decay)
+        # Create the actual Schedule-Free optimizer internally
+        self.sf_optimizer = AdamWScheduleFree(
+            params, lr=lr, betas=betas, weight_decay=weight_decay, warmup_steps=warmup_steps
+        )
+        
+    def step(self, closure=None):
+        # Delegate to the Schedule-Free optimizer
+        return self.sf_optimizer.step(closure)
+        
+    def train(self):
+        self.sf_optimizer.train()
+        
+    def eval(self):
+        self.sf_optimizer.eval()
+```
+
+This wrapper helps DeepSpeed recognize the optimizer as a standard AdamW while still using the Schedule-Free implementation.

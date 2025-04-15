@@ -8,7 +8,31 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 import deepspeed
+import torch.optim as optim
 from schedulefree import AdamWScheduleFree  # Import the Schedule-Free optimizer
+from schedulefree.adamw_schedulefree import AdamWScheduleFree as OriginalScheduleFree
+
+# Create a wrapper that inherits from torch.optim.AdamW for better DeepSpeed compatibility
+class ScheduleFreeWrapper(optim.AdamW):
+    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), weight_decay=0.01, warmup_steps=100):
+        super().__init__(params, lr=lr, betas=betas, weight_decay=weight_decay)
+        # Create the actual Schedule-Free optimizer internally
+        self.sf_optimizer = OriginalScheduleFree(
+            params, lr=lr, betas=betas, weight_decay=weight_decay, warmup_steps=warmup_steps
+        )
+        self.train_mode = True
+        
+    def step(self, closure=None):
+        # Delegate to the Schedule-Free optimizer
+        return self.sf_optimizer.step(closure)
+        
+    def train(self):
+        self.train_mode = True
+        self.sf_optimizer.train()
+        
+    def eval(self):
+        self.train_mode = False
+        self.sf_optimizer.eval()
 
 class SimpleModel(nn.Module):
     """A simple model for demonstration purposes"""
@@ -79,15 +103,14 @@ def create_deepspeed_config(args):
         "zero_optimization": {
             "stage": 2,
             "contiguous_gradients": True,
-            "overlap_comm": True,
-            "zero_allow_untested_optimizer": True
+            "overlap_comm": True
         }
     }
     return config
 
 def create_custom_optimizer(model, args):
     """Create the Schedule-Free optimizer"""
-    return AdamWScheduleFree(
+    return ScheduleFreeWrapper(
         model.parameters(),
         lr=args.lr,
         betas=(args.beta, 0.999),
