@@ -3,12 +3,6 @@
 # Create checkpoint directory
 mkdir -p checkpoints
 
-# Install dependencies if they're not already installed
-pip install -r requirements.txt
-
-# Install Schedule-Free from source
-pip install git+https://github.com/facebookresearch/schedule_free.git
-
 # Run the demo with DeepSpeed
 deepspeed --num_gpus=1 schedulefree_deepspeed_demo.py \
     --deepspeed \
