@@ -37,8 +37,8 @@ class RandomDataset(Dataset):
         return self.size
     
     def __getitem__(self, idx):
-        # Generate random input tensor
-        x = torch.randn(self.input_dim)
+        # Generate random input tensor - use float16 to match DeepSpeed's fp16 configuration
+        x = torch.randn(self.input_dim, dtype=torch.float16)
         # Generate random target (class index)
         y = torch.randint(0, self.num_classes, (1,)).item()
         return x, y
