@@ -10,7 +10,8 @@
   "zero_optimization": {
     "stage": 2,
     "contiguous_gradients": true,
-    "overlap_comm": true
+    "overlap_comm": true,
+    "zero_allow_untested_optimizer": true
   },
   "wall_clock_breakdown": true
 }
