@@ -1,0 +1,16 @@
+{
+  "train_batch_size": 32,
+  "gradient_accumulation_steps": 1,
+  "gradient_clipping": 1.0,
+  "fp16": {
+    "enabled": true,
+    "loss_scale": 0,
+    "initial_scale_power": 16
+  },
+  "zero_optimization": {
+    "stage": 2,
+    "contiguous_gradients": true,
+    "overlap_comm": true
+  },
+  "wall_clock_breakdown": true
+}
