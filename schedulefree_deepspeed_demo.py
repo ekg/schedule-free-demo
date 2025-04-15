@@ -10,29 +10,6 @@ from torch.utils.data import DataLoader, Dataset
 import deepspeed
 import torch.optim as optim
 from schedulefree import AdamWScheduleFree  # Import the Schedule-Free optimizer
-from schedulefree.adamw_schedulefree import AdamWScheduleFree as OriginalScheduleFree
-
-# Create a wrapper that inherits from torch.optim.AdamW for better DeepSpeed compatibility
-class ScheduleFreeWrapper(optim.AdamW):
-    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), weight_decay=0.01, warmup_steps=100):
-        super().__init__(params, lr=lr, betas=betas, weight_decay=weight_decay)
-        # Create the actual Schedule-Free optimizer internally
-        self.sf_optimizer = OriginalScheduleFree(
-            params, lr=lr, betas=betas, weight_decay=weight_decay, warmup_steps=warmup_steps
-        )
-        self.train_mode = True
-        
-    def step(self, closure=None):
-        # Delegate to the Schedule-Free optimizer
-        return self.sf_optimizer.step(closure)
-        
-    def train(self):
-        self.train_mode = True
-        self.sf_optimizer.train()
-        
-    def eval(self):
-        self.train_mode = False
-        self.sf_optimizer.eval()
 
 class SimpleModel(nn.Module):
     """A simple model for demonstration purposes"""
@@ -110,7 +87,7 @@ def create_deepspeed_config(args):
 
 def create_custom_optimizer(model, args):
     """Create the Schedule-Free optimizer"""
-    return ScheduleFreeWrapper(
+    return AdamWScheduleFree(
         model.parameters(),
         lr=args.lr,
         betas=(args.beta, 0.999),
@@ -134,10 +111,17 @@ def main():
     # DeepSpeed initialization
     ds_config = create_deepspeed_config(args)
     
+    # Keep reference to the original optimizer for train/eval mode
+    sf_optimizer = optimizer
+    
+    # No LR scheduler needed for Schedule-Free
+    lr_scheduler = None
+    
     # Model, optimizer, and training data
     model_engine, optimizer, _, _ = deepspeed.initialize(
         model=model,
         optimizer=optimizer,
+        lr_scheduler=lr_scheduler,
         config=ds_config,
         model_parameters=model.parameters()
     )
@@ -165,7 +149,7 @@ def main():
         model_engine.train()
         
         # Important: We need to put Schedule-Free in train mode
-        optimizer.train()
+        sf_optimizer.train()
         
         epoch_loss = 0.0
         steps = 0
@@ -189,7 +173,7 @@ def main():
         print(f"Epoch: {epoch}, Avg Loss: {avg_loss:.4f}")
         
         # Important: We need to put Schedule-Free in eval mode for validation
-        optimizer.eval()
+        sf_optimizer.eval()
         
         # Save checkpoint
         if torch.distributed.get_rank() == 0:  # Save only on one process
